@@ -17,7 +17,7 @@ __section("classifier_egress_drop") int egress_drop(struct __sk_buff *skb) {
 	if (eth->h_proto == ___constant_swab16(ETH_P_IP))
 		return TC_ACT_SHOT;
 
-	return TC_ACT_OK;
+	return TC_ACT_SHOT;
 }
 
 __section("classifier_ingress_drop") int ingress_drop(struct __sk_buff *skb) {
@@ -33,5 +33,5 @@ __section("classifier_ingress_drop") int ingress_drop(struct __sk_buff *skb) {
 	if (eth->h_proto == ___constant_swab16(ETH_P_IP))
 		return TC_ACT_SHOT;
 
-	return TC_ACT_OK;
+	return TC_ACT_SHOT;
 }

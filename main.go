@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/cilium/ebpf/rlimit"
 	"net"
 	"os"
 	"time"
@@ -48,6 +49,9 @@ func stringPtr(v string) *string {
 }
 
 func main() {
+	if err := rlimit.RemoveMemlock(); err != nil {
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -89,23 +93,23 @@ func main() {
 	}()
 
 	// Setup dummy interface for testing
-	var rtnl *rtnetlink.Conn
-	tcIface := "tcDevTesting"
-	if rtnl, err = setupDummyInterface(tcIface); err != nil {
-		fmt.Fprintf(os.Stderr, "could not setup dummy interface: %v\n", err)
-		return
-	}
-	defer rtnl.Close()
+	//var rtnl *rtnetlink.Conn
+	tcIface := "lo"
+	//if rtnl, err = setupDummyInterface(tcIface); err != nil {
+	//	fmt.Fprintf(os.Stderr, "could not setup dummy interface: %v\n", err)
+	//	return
+	//}
+	//defer rtnl.Close()
 	devID, err := net.InterfaceByName(tcIface)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "could not get interface ID: %v\n", err)
 		return
 	}
-	defer func(devID uint32, rtnl *rtnetlink.Conn) {
-		if err := rtnl.Link.Delete(devID); err != nil {
-			fmt.Fprintf(os.Stderr, "could not delete interface %s: %v\n", tcIface, err)
-		}
-	}(uint32(devID.Index), rtnl)
+	//defer func(devID uint32, rtnl *rtnetlink.Conn) {
+	//	if err := rtnl.Link.Delete(devID); err != nil {
+	//		fmt.Fprintf(os.Stderr, "could not delete interface %s: %v\n", tcIface, err)
+	//	}
+	//}(uint32(devID.Index), rtnl)
 
 	qdisc := tc.Object{
 		tc.Msg{
@@ -152,17 +156,17 @@ func main() {
 	<-ctx.Done()
 
 	if err := tcnl.Filter().Delete(&tc.Object{
-			tc.Msg{
-				Family:  unix.AF_UNSPEC,
-				Ifindex: uint32(devID.Index),
-				Handle:  1,
-				Parent:  0xFFFFFFF2,
-				Info:    0x10000,
-			},
-			tc.Attribute{
-				Kind: "bpf",
-			},
-		}); err != nil {
+		tc.Msg{
+			Family:  unix.AF_UNSPEC,
+			Ifindex: uint32(devID.Index),
+			Handle:  1,
+			Parent:  0xFFFFFFF2,
+			Info:    0x10000,
+		},
+		tc.Attribute{
+			Kind: "bpf",
+		},
+	}); err != nil {
 		fmt.Fprintf(os.Stderr, "could not delete eBPF filter: %v\n", err)
 		return
 	}
